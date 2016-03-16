@@ -26,6 +26,27 @@ Resources:
             IpAddress:
               aws:SourceIp:
               - {Ref: WhitelistedIp}
+  VideoDashboardBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: Private
+  VideoDashboardBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: VideoDashboardBucket
+      PolicyDocument:
+        Id: VideoDashboardBucketPolicy
+        Statement:
+        - Action: ['s3:GetObject']
+          Effect: Allow
+          Principal: "*"
+          Resource:
+            Fn::Join: ['', ['arn:aws:s3:::', {Ref: VideoDashboardBucket}, '/*' ]]
+          Condition:
+            IpAddress:
+              aws:SourceIp:
+              - {Ref: WhitelistedIp}
 Outputs:
   Bucket:
     Value:
