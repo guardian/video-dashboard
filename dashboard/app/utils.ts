@@ -1,3 +1,6 @@
+export function getMonth(moment) {
+  return moment.format('YYYY-MM');
+}
 export function formatDate(moment) {
   return moment.format('YYYY-MM-DD');
 }
