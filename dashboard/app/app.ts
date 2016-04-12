@@ -38,11 +38,13 @@ bars.bars$.subscribe(bars => app.set('bars', bars));
 function getRatio(date) {
   const total$ = getTotal(date, {
     'from-date': date,
-    'to-date': date
+    'to-date': date,
+    'type': 'article|liveblog'
   });
   const totalWithVideos$ = getTotal(date, {
     'from-date': date,
     'to-date': date,
+    'type': 'article|liveblog',
     'contains-element': 'videos'
   });
 
