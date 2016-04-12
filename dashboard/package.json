@@ -1,0 +1,23 @@
+{
+  "name": "vidistats",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "jspm": "^0.16.33"
+  },
+  "jspm": {
+    "dependencies": {
+      "moment": "npm:moment@^2.12.0",
+      "ractive": "github:ractivejs/ractive@^0.7.3",
+      "rx": "npm:rx@4.1.0",
+      "rx-dom": "npm:rx-dom@7.0.3",
+      "ts": "github:frankwallis/plugin-typescript@4.0.2"
+    },
+    "devDependencies": {
+      "typescript": "npm:typescript@^1.6.2"
+    }
+  },
+  "scripts": {
+    "postinstall": "jspm install"
+  }
+}
