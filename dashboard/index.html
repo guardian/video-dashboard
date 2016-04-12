@@ -6,11 +6,24 @@
 
 <body>
   <div id="app"></div>
+  <script id="app-template" type="text/ractive">
+    <input name="date" value={{date}} />
+
+    {{#bars}}
+      {{>bar}}
+    {{/bars}}
+
+    {{#partial bar}}
+      <div>({{day}}) {{date}}: {{totalWithVideos}} / {{total}} ({{percent}}%)</div>
+    {{/partial}}
+  </script>
+
 
   <script src="jspm_packages/system.js"></script>
   <script src="config.js"></script>
   <script>
       System.import('app/app').catch(e => console.log(e));
   </script>
+
 </body>
 </html>

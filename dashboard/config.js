@@ -7,7 +7,7 @@ System.config({
   },
 
   packages: {
-    app: {
+    "app": {
       "defaultExtension": "ts",
       "typescriptOptions": {
         "module": "system",
@@ -18,7 +18,7 @@ System.config({
         "sourceMap": true,
         "supportHtmlImports": true
       },
-      meta: {
+      "meta": {
         "*.ts": {
           "loader": "ts"
         }
@@ -28,7 +28,10 @@ System.config({
 
   meta: {
     "@cycle/http/*": {
-      deps: ["rx", "superagent"]
+      "deps": [
+        "rx",
+        "superagent"
+      ]
     }
   },
 
@@ -39,8 +42,10 @@ System.config({
     "@cycle/isolate": "npm:@cycle/isolate@1.2.0",
     "emitter": "npm:emitter@0.0.5",
     "moment": "npm:moment@2.12.0",
+    "ractive": "github:ractivejs/ractive@0.7.3",
     "reduce": "npm:reduce@1.0.1",
     "rx": "npm:rx@4.1.0",
+    "rx-dom": "npm:rx-dom@7.0.3",
     "ts": "github:frankwallis/plugin-typescript@4.0.2",
     "typescript": "npm:typescript@1.8.7",
     "github:frankwallis/plugin-typescript@4.0.2": {
@@ -130,10 +135,10 @@ System.config({
       "x-is-array": "npm:x-is-array@0.1.0"
     },
     "npm:@cycle/http@8.2.2": {
+      "./dist/http-driver": "./src/http-driver",
       "process": "github:jspm/nodelibs-process@0.1.2",
       "rx": "npm:rx@4.1.0",
-      "superagent": "npm:superagent@1.7.2",
-      "./dist/http-driver": "./src/http-driver"
+      "superagent": "npm:superagent@1.7.2"
     },
     "npm:asn1.js@4.5.2": {
       "assert": "github:jspm/nodelibs-assert@0.1.0",
@@ -929,6 +934,10 @@ System.config({
     "npm:ripemd160@1.0.1": {
       "buffer": "github:jspm/nodelibs-buffer@0.1.0",
       "process": "github:jspm/nodelibs-process@0.1.2"
+    },
+    "npm:rx-dom@7.0.3": {
+      "process": "github:jspm/nodelibs-process@0.1.2",
+      "rx": "npm:rx@4.1.0"
     },
     "npm:rx@4.1.0": {
       "process": "github:jspm/nodelibs-process@0.1.2"

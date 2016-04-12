@@ -3,18 +3,13 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "jspm": "^0.17.30"
+    "jspm": "^0.16.33"
   },
   "jspm": {
     "dependencies": {
-      "@cycle/core": "npm:@cycle/core@^6.0.3",
-      "@cycle/dom": "npm:@cycle/dom@^9.2.2",
-      "@cycle/http": "npm:@cycle/http@^8.2.2",
-      "@cycle/isolate": "npm:@cycle/isolate@^1.2.0",
-      "emitter": "npm:emitter@^0.0.5",
-      "moment": "npm:moment@2.12.0",
-      "reduce": "npm:reduce@^1.0.1",
+      "ractive": "github:ractivejs/ractive@^0.7.3",
       "rx": "npm:rx@4.1.0",
+      "rx-dom": "npm:rx-dom@7.0.3",
       "ts": "github:frankwallis/plugin-typescript@4.0.2"
     },
     "devDependencies": {

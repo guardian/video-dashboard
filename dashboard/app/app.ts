@@ -1,54 +1,60 @@
 import Rx from 'rx';
-import Cycle from '@cycle/core';
-import CycleDOM from '@cycle/dom';
-import CycleHTTP from '@cycle/http';
-import isolate from '@cycle/isolate';
+import "rx-dom";
+import Ractive from 'ractive';
 import moment from 'moment';
+
 import {apiRoot} from './config';
-import {EmbededVideoRatio} from './EmbededVideoRatio';
-import {formatDate} from './utils';
+import {buildQS, formatDate} from './utils';
 
-// v == Utils
-
-const {makeDOMDriver, div, span, input, label} = CycleDOM;
-const {Observable} = Rx;
-const {makeHTTPDriver} = CycleHTTP;
-
-// ^ == Utils
-function intent(DOMSource) {
-  const date$ = DOMSource.select('.date').events('input')
-    .map(ev => ev.target.value)
-    .startWith(formatDate(moment()));
-  return {date$};
-}
-
-function view(state$) {
-  return state$.map(state => {
-    return div([
-      input('.date', {type: 'input', value: state})
-    ])});
-}
-
-function main(sources) {
-  const {date$} = intent(sources.DOM);
-
-  const days = Array.from(Array(7).keys()).map(i => {
-    return EmbededVideoRatio(sources, date$.map(d => formatDate(moment(d).subtract(i, 'days'))));
-  });
-
-  const v$ = Rx.Observable.combineLatest(view(date$), ...days.map(d => d.DOM), (...args) => {
-    return div('.container', args);
-  });
-  const h$ = Rx.Observable.concat(...days.map(d => d.HTTP));
-
-  return {
-    DOM: v$,
-    HTTP: h$
+const app = new Ractive({
+  el: '#app',
+  template: '#app-template',
+  data: {
+    date: formatDate(moment()),
+    bars: []
   }
+});
+
+const bars$ = new Rx.Subject();
+const bars = {
+  setDate: startDate => {
+    const dates = Array.from(Array(7).keys()).map(i => formatDate(moment(startDate).subtract(i, 'days')));
+    const ratios = dates.map(date => getRatio(date));
+    const bsSubscription = Rx.Observable.combineLatest(...ratios).subscribe(bs => {
+      bars$.onNext(bs);
+      bsSubscription.dispose();
+    });
+  },
+
+  bars$
+};
+
+app.observe('date', date => {
+  bars.setDate(date);
+});
+bars.bars$.subscribe(bars => {
+  console.log(bars)
+  app.set('bars', bars)
+});
+
+function getRatio(date) {
+  const total$ = getTotal(date, {
+    'from-date': date,
+    'to-date': date
+  });
+  const totalWithVideos$ = getTotal(date, {
+    'from-date': date,
+    'to-date': date,
+    'contains-element': 'videos'
+  });
+
+  return Rx.Observable.combineLatest(total$, totalWithVideos$, (total, totalWithVideos) => {
+    const percent = Math.round((totalWithVideos/total)*100)
+    return {date, total, totalWithVideos, percent, day: moment(date).format('ddd')};
+  });
 }
 
-const drivers = {
-  DOM: makeDOMDriver('#app'),
-  HTTP: makeHTTPDriver()
+function getTotal(date, params) {
+  return Rx.DOM.ajax({ url: `${apiRoot}?${buildQS(params)}`, responseType: 'json' })
+    .map(data => data.response.response.total);
 }
-Cycle.run(main, drivers);
