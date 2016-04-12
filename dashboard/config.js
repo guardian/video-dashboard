@@ -27,6 +27,7 @@ System.config({
   },
 
   map: {
+    "moment": "npm:moment@2.12.0",
     "ractive": "github:ractivejs/ractive@0.7.3",
     "rx": "npm:rx@4.1.0",
     "rx-dom": "npm:rx-dom@7.0.3",

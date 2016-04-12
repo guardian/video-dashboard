@@ -5,6 +5,7 @@
     <style>
       body {
         color: #333;
+        font-size: 12px;
       }
       .bars {
         display: flex;
@@ -50,12 +51,12 @@
 
     {{#partial bar}}
       <div class="bar">
-        <div class="bar__label">{{dateOfMonth}} ({{day}})</div>
+        <div class="bar__label">{{dateOfMonth}} {{day}}</div>
         <div class="bar__full">
           <div class="bar__percent" style="height: {{percent}}%">
-            ({{percent}})%
+            {{percent}}%
           </div>
-          <div class="bar__ratio">{{totalWithVideos}} / {{total}}</div>
+          <div class="bar__ration">{{totalWithVideos}} / {{total}}</div>
         </div>
       </div>
     {{/partial}}

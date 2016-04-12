@@ -49,7 +49,7 @@ function getRatio(date) {
   return Rx.Observable.combineLatest(total$, totalWithVideos$, (total, totalWithVideos) => {
     const percent = Math.round((totalWithVideos/total)*100)
     return {date, total, totalWithVideos, percent,
-      day: moment(date).format('ddd'),
+      day: moment(date).format('dd'),
       dateOfMonth: moment(date).format('D'),
     };
   });
