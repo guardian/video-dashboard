@@ -16,7 +16,6 @@
       }
       .bar__full {
         background: #333;
-        height: 100%;
         display: flex;
         flex-direction: column-reverse;
         align-items: flex-end;
@@ -35,6 +34,30 @@
       .bar__ratio {
         padding: 4px;
       }
+
+      .key {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .key__item {
+
+      }
+      .key__item::before {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background: #000;
+        content: ' ';
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+      .key__item--all-video::before {
+        background: #333;
+      }
+      .key__item--with-video::before {
+        background: #fb0;
+      }
     </style>
 </head>
 
@@ -48,6 +71,10 @@
         {{>bar}}
       {{/bars}}
     </div>
+    <ul class="key">
+      <li class="key__item key__item--all-video">All content produced</li>
+      <li class="key__item key__item--with-video">Content with video embedded</li>
+    </ul>
 
     {{#partial bar}}
       <div class="bar">
