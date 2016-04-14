@@ -15,21 +15,24 @@
       .bars-container {
         border-bottom: 2px #d3d3d3 solid;
         margin-top: 20px;
-        padding: 10px ;
+        padding: 10px;
       }
       .bars {
         display: flex;
         margin-bottom: 5px;
+        width: 100%;
       }
       .bar {
         flex-grow: 1;
         border: 1px solid #ccc;
+        overflow: hidden;
+        font-family: monospace;
+        text-align: center;
       }
       .bar__full {
         background: #333;
         display: flex;
         flex-direction: column-reverse;
-        align-items: flex-end;
         height: 500px;
         width: 100%;
         color: #fff;
@@ -38,12 +41,20 @@
         background: #fb0;
         width: 100%;
         color: #333;
+        display: flex;
+        flex-direction: column-reverse;
+        padding: 10px 0;
       }
       .bar__label {
         padding: 8px;
       }
       .bar__ratio {
-        padding: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
+        padding: 10px 0;
+        flex-grow: 1;
       }
 
       .key {
@@ -106,12 +117,12 @@
 
     {{#partial bar}}
       <div class="bar">
-        <div class="bar__label">{{label}}</div>
+        <div class="bar__label">{{textLabel}}</div>
         <div class="bar__full">
           <div class="bar__percent" style="height: {{percent}}%">
             {{percent}}%
           </div>
-          <div class="bar__ratio">{{segment}} / {{total}}</div>
+          <div class="bar__ratio" title="{{segment}} / {{total}}">{{{numberLabel}}}</div>
         </div>
       </div>
     {{/partial}}

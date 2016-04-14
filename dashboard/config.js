@@ -28,6 +28,7 @@ System.config({
 
   map: {
     "moment": "npm:moment@2.12.0",
+    "numeral": "npm:numeral@1.5.3",
     "ractive": "github:ractivejs/ractive@0.7.3",
     "rx": "npm:rx@4.1.0",
     "rx-dom": "npm:rx-dom@7.0.3",
@@ -53,6 +54,9 @@ System.config({
     },
     "npm:inherits@2.0.1": {
       "util": "github:jspm/nodelibs-util@0.1.0"
+    },
+    "npm:numeral@1.5.3": {
+      "fs": "github:jspm/nodelibs-fs@0.1.2"
     },
     "npm:os-browserify@0.1.2": {
       "os": "github:jspm/nodelibs-os@0.1.0"

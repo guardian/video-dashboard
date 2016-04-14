@@ -2,6 +2,7 @@ import Rx from 'rx';
 import "rx-dom";
 import Ractive from 'ractive';
 import moment from 'moment';
+import numeral from 'numeral';
 
 import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
@@ -47,14 +48,14 @@ bars.readyVsPlayBars$.subscribe(readyVsPlayBars => app.set('readyVsPlayBars', re
 
 
 function getArticleReadyVsPlayRatio(date) {
-  const url = `${dashboardApiRoot}/media-event-counts/${date.replace(/-/g, '/')}.json`;
+  const url = `${dashboardApiRoot}/article-video-event-counts/${date.replace(/-/g, '/')}.json`;
   return Rx.DOM.ajax({ url, responseType: 'json' }).map(resp => {
     // This is just the way we're saving this information for now
-    const mediaEvents = resp.response[0];
+    const mediaEvents = resp.response.find(row => row.tag === 'type/article');
     return bar(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
+  }).catch(() => {
+    return Rx.Observable.of(bar(0, 0, dateLabel(date)));
   });
-
-
 }
 
 
@@ -80,9 +81,14 @@ function dateLabel(date) {
   return `${moment(date).format('dd')} ${moment(date).format('D')}`;
 }
 
-function bar(total, segment, label) {
+function ratioLabel(total, segment) {
+  return `${numeral(segment).format('0a')}<br />of<br />${numeral(total).format('0a')}`;
+}
+
+function bar(total, segment, textLabel) {
   const percent = Math.round((segment/total)*100);
-  return {total, segment, label, percent};
+  const numberLabel = ratioLabel(total, segment);
+  return {total, segment, textLabel, numberLabel, percent};
 }
 
 function getCapiTotal(params) {

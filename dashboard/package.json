@@ -8,6 +8,7 @@
   "jspm": {
     "dependencies": {
       "moment": "npm:moment@^2.12.0",
+      "numeral": "npm:numeral@^1.5.3",
       "ractive": "github:ractivejs/ractive@^0.7.3",
       "rx": "npm:rx@4.1.0",
       "rx-dom": "npm:rx-dom@7.0.3",
