@@ -13,6 +13,14 @@ Resources:
     Properties:
       BucketName: {Ref: VideoDashboardUri}
       AccessControl: Private
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods:
+            - GET
+            AllowedOrigins:
+              - "*"
+            AllowedHeaders:
+              - "*"
   VideoDashboardBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:

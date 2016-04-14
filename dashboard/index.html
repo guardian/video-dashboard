@@ -6,9 +6,20 @@
       body {
         color: #333;
         font-size: 12px;
+        padding: 5px;
+      }
+
+      .bars-heading {
+        margin: 0 0 5px 0;
+      }
+      .bars-container {
+        border-bottom: 2px #d3d3d3 solid;
+        margin-top: 20px;
+        padding: 10px ;
       }
       .bars {
         display: flex;
+        margin-bottom: 5px;
       }
       .bar {
         flex-grow: 1;
@@ -52,10 +63,10 @@
         margin-right: 10px;
         vertical-align: middle;
       }
-      .key__item--all-video::before {
+      .key__item--total::before {
         background: #333;
       }
-      .key__item--with-video::before {
+      .key__item--segment::before {
         background: #fb0;
       }
     </style>
@@ -66,24 +77,41 @@
   <script id="app-template" type="text/ractive">
     <input type="month" name="date" value={{date}} />
 
-    <div class="bars">
-      {{#bars}}
-        {{>bar}}
-      {{/bars}}
+    <div class="bars-container">
+      <h1 class="bars-heading">How many articles have video embedded?</h1>
+      <div class="bars">
+        {{#embeddedVideoBars}}
+          {{>bar}}
+        {{/embeddedVideoBars}}
+      </div>
+      <ul class="key">
+        <li class="key__item key__item--total">All content produced</li>
+        <li class="key__item key__item--segment">Content with video embedded</li>
+      </ul>
     </div>
-    <ul class="key">
-      <li class="key__item key__item--all-video">All content produced</li>
-      <li class="key__item key__item--with-video">Content with video embedded</li>
-    </ul>
+
+
+    <div class="bars-container">
+      <h1 class="bars-heading">How many videos are played whilst embedded in articles?</h1>
+      <div class="bars">
+        {{#readyVsPlayBars}}
+          {{>bar}}
+        {{/readyVsPlayBars}}
+      </div>
+      <ul class="key">
+        <li class="key__item key__item--total">Total videos requested on articles</li>
+        <li class="key__item key__item--segment">Videos played on articles</li>
+      </ul>
+    </div>
 
     {{#partial bar}}
       <div class="bar">
-        <div class="bar__label">{{dateOfMonth}} {{day}}</div>
+        <div class="bar__label">{{label}}</div>
         <div class="bar__full">
           <div class="bar__percent" style="height: {{percent}}%">
             {{percent}}%
           </div>
-          <div class="bar__ration">{{totalWithVideos}} / {{total}}</div>
+          <div class="bar__ratio">{{segment}} / {{total}}</div>
         </div>
       </div>
     {{/partial}}
