@@ -2,8 +2,9 @@ import Rx from 'rx';
 import "rx-dom";
 import Ractive from 'ractive';
 import moment from 'moment';
+import numeral from 'numeral';
 
-import {apiRoot} from './config';
+import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
 
 const app = new Ractive({
@@ -15,33 +16,56 @@ const app = new Ractive({
   }
 });
 
-const bars$ = new Rx.Subject();
+const embeddedVideoBars$ = new Rx.Subject();
+const readyVsPlayBars$ = new Rx.Subject();
 const bars = {
   setDate: startDate => {
     const daysInMonth = moment(startDate).daysInMonth();
-    const dates = Array.from(Array(daysInMonth).keys()).map(i => formatDate(moment(startDate).startOf('month').add(i, 'days')));
-    const ratios = dates.filter(date => moment(date).isBefore(moment())).map(date => {
-      return getRatio(date);
+    const dates = Array.from(Array(daysInMonth).keys())
+      .map(i => formatDate(moment(startDate).startOf('month').add(i, 'days')))
+      .filter(date => moment(date).isBefore(moment().subtract(1, 'days')));
+
+    const embeddedVideoRatios = dates.map(getCapiRatio);
+    const embeddedVideoSubscription = Rx.Observable.combineLatest(...embeddedVideoRatios).subscribe(bs => {
+      embeddedVideoBars$.onNext(bs);
+      embeddedVideoSubscription.dispose();
     });
-    const bsSubscription = Rx.Observable.combineLatest(...ratios).subscribe(bs => {
-      bars$.onNext(bs);
-      bsSubscription.dispose();
+
+    const articleReadyVsPlayRatios = dates.map(getArticleReadyVsPlayRatio);
+    const articleReadyVsPlaySubscription = Rx.Observable.combineLatest(...articleReadyVsPlayRatios).subscribe(bs => {
+      readyVsPlayBars$.onNext(bs);
+      articleReadyVsPlaySubscription.dispose();
     });
   },
 
-  bars$
+  embeddedVideoBars$,
+  readyVsPlayBars$
 };
 
 app.observe('date', date => bars.setDate(date));
-bars.bars$.subscribe(bars => app.set('bars', bars));
+bars.embeddedVideoBars$.subscribe(embeddedVideoBars => app.set('embeddedVideoBars', embeddedVideoBars));
+bars.readyVsPlayBars$.subscribe(readyVsPlayBars => app.set('readyVsPlayBars', readyVsPlayBars));
 
-function getRatio(date) {
-  const total$ = getTotal(date, {
+
+function getArticleReadyVsPlayRatio(date) {
+  const url = `${dashboardApiRoot}/article-video-event-counts/${date.replace(/-/g, '/')}.json`;
+  return Rx.DOM.ajax({ url, responseType: 'json' }).map(resp => {
+    // This is just the way we're saving this information for now
+    const mediaEvents = resp.response.find(row => row.tag === 'type/article');
+    return bar(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
+  }).catch(() => {
+    return Rx.Observable.of(bar(0, 0, dateLabel(date)));
+  });
+}
+
+
+function getCapiRatio(date) {
+  const total$ = getCapiTotal({
     'from-date': date,
     'to-date': date,
     'type': 'article|liveblog'
   });
-  const totalWithVideos$ = getTotal(date, {
+  const totalWithVideos$ = getCapiTotal({
     'from-date': date,
     'to-date': date,
     'type': 'article|liveblog',
@@ -49,15 +73,25 @@ function getRatio(date) {
   });
 
   return Rx.Observable.combineLatest(total$, totalWithVideos$, (total, totalWithVideos) => {
-    const percent = Math.round((totalWithVideos/total)*100)
-    return {date, total, totalWithVideos, percent,
-      day: moment(date).format('dd'),
-      dateOfMonth: moment(date).format('D'),
-    };
+    return bar(total, totalWithVideos, dateLabel(date));
   });
 }
 
-function getTotal(date, params) {
+function dateLabel(date) {
+  return `${moment(date).format('dd')} ${moment(date).format('D')}`;
+}
+
+function ratioLabel(total, segment) {
+  return `${numeral(segment).format('0a')}<br />of<br />${numeral(total).format('0a')}`;
+}
+
+function bar(total, segment, textLabel) {
+  const percent = Math.round((segment/total)*100);
+  const numberLabel = ratioLabel(total, segment);
+  return {total, segment, textLabel, numberLabel, percent};
+}
+
+function getCapiTotal(params) {
   return Rx.DOM.ajax({ url: `${apiRoot}?${buildQS(params)}`, responseType: 'json' })
     .map(data => data.response.response.total);
 }
