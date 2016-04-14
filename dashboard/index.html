@@ -80,6 +80,18 @@
       .key__item--segment::before {
         background: #fb0;
       }
+
+      .β {
+        vertical-align: super;
+        background: red;
+        color: #f1f1f1;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        width: 24px;
+        height: 24px;
+        text-align: center;
+      }
     </style>
 </head>
 
@@ -103,7 +115,7 @@
 
 
     <div class="bars-container">
-      <h1 class="bars-heading">How many videos are played whilst embedded in articles?</h1>
+      <h1 class="bars-heading">How many videos are played whilst embedded in articles?{{>beta}}</h1>
       <div class="bars">
         {{#readyVsPlayBars}}
           {{>bar}}
@@ -125,6 +137,10 @@
           <div class="bar__ratio" title="{{segment}} / {{total}}">{{{numberLabel}}}</div>
         </div>
       </div>
+    {{/partial}}
+
+    {{#partial beta}}
+      <span class="β" title="βeta - treat with caution">β</span>
     {{/partial}}
   </script>
 
