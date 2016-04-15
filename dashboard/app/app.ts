@@ -7,18 +7,22 @@ import numeral from 'numeral';
 import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
 
+const google = window.google;
+
 const app = new Ractive({
   el: '#app',
   template: '#app-template',
   data: {
-    date: getMonth(moment()),
-    bars: []
+    date: getMonth(moment())
   }
 });
 
-const embeddedVideoBars$ = new Rx.Subject();
-const readyVsPlayBars$ = new Rx.Subject();
-const bars = {
+const embeddedVideoRatios$ = new Rx.Subject();
+const readyVsPlayRatios$ = new Rx.Subject();
+const erRatios$ = embeddedVideoRatios$.withLatestFrom(readyVsPlayRatios$,
+  (embeddedVideoRatios, readyVsPlayRatios) => ({embeddedVideoRatios, readyVsPlayRatios}));
+
+const ratios = {
   setDate: startDate => {
     const daysInMonth = moment(startDate).daysInMonth();
     const dates = Array.from(Array(daysInMonth).keys())
@@ -27,24 +31,94 @@ const bars = {
 
     const embeddedVideoRatios = dates.map(getCapiRatio);
     const embeddedVideoSubscription = Rx.Observable.combineLatest(...embeddedVideoRatios).subscribe(bs => {
-      embeddedVideoBars$.onNext(bs);
+      embeddedVideoRatios$.onNext(bs);
       embeddedVideoSubscription.dispose();
     });
 
     const articleReadyVsPlayRatios = dates.map(getArticleReadyVsPlayRatio);
     const articleReadyVsPlaySubscription = Rx.Observable.combineLatest(...articleReadyVsPlayRatios).subscribe(bs => {
-      readyVsPlayBars$.onNext(bs);
+      readyVsPlayRatios$.onNext(bs);
       articleReadyVsPlaySubscription.dispose();
     });
   },
 
-  embeddedVideoBars$,
-  readyVsPlayBars$
+  embeddedVideoRatios$,
+  readyVsPlayRatios$,
+  erRatios$
 };
 
-app.observe('date', date => bars.setDate(date));
-bars.embeddedVideoBars$.subscribe(embeddedVideoBars => app.set('embeddedVideoBars', embeddedVideoBars));
-bars.readyVsPlayBars$.subscribe(readyVsPlayBars => app.set('readyVsPlayBars', readyVsPlayBars));
+ratios.erRatios$.subscribe(({embeddedVideoRatios, readyVsPlayRatios}) => {
+  const maxEmbeds = embeddedVideoRatios.reduce((prev, next) => Math.max(prev, next.total), 0);
+  const maxPlays = readyVsPlayRatios.reduce((prev, next) => Math.max(prev, next.divisor), 0);
+  const embedRatios = embeddedVideoRatios.map(b => ratio(maxEmbeds, b.total, b.textLabel));
+  const playRatios = readyVsPlayRatios.map(b => ratio(maxPlays, b.divisor, b.textLabel));
+  const embedPlayRatios = embedRatios.map((r, i) => ({embed: r, play: playRatios[i]}));
+
+  const data = new google.visualization.DataTable();
+  data.addColumn('string', 'Day');
+  data.addColumn('number', 'Embeds');
+  data.addColumn('number', 'Plays');
+  data.addRows(embedPlayRatios.map(r => [r.play.textLabel, r.embed.divisor, r.play.divisor]));
+
+  const options = {
+    chart: {
+      title: 'If we increase embeded videos in articles, do we get more plays?'
+    },
+    axes: {
+      y: {
+        0: {range: {min: 0, max: maxEmbeds}},
+        1: {range: {min: 0, max: maxPlays}}
+      }
+    },
+    series: {
+      0: {axis: '0', targetAxisIndex: 0},
+      1: {axis: '1', targetAxisIndex: 1}
+    },
+    colors: ['#fb0', '#333']
+  };
+
+  const chart = new google.charts.Line(document.getElementById('play-embed-quantities'));
+  chart.draw(data, options);
+});
+
+app.observe('date', date => ratios.setDate(date));
+ratios.embeddedVideoRatios$.subscribe(embeddedVideoRatios => {
+  const data = new google.visualization.DataTable();
+  data.addColumn('string', 'Day');
+  data.addColumn('number', 'Plays');
+  data.addColumn('number', 'Published');
+  data.addRows(embeddedVideoRatios.map(r => [r.textLabel, r.divisor, r.total]));
+
+  const options = {
+    title: 'In what percentage of articles are we embedding video?',
+    isStacked: 'percent',
+    colors: ['#fb0', '#333'],
+    height: 500
+  };
+
+  // Annoyingly we can't use material google.chart.Ratio as it doesn't support isStacked: 'percent'
+  var chart = new google.visualization.ColumnChart(document.getElementById('embed-ratios'));
+  chart.draw(data, options);
+});
+
+ratios.readyVsPlayRatios$.subscribe(readyVsPlayRatios => {
+  const data = new google.visualization.DataTable();
+  data.addColumn('string', 'Day');
+  data.addColumn('number', 'Plays');
+  data.addColumn('number', 'Published');
+  data.addRows(readyVsPlayRatios.map(r => [r.textLabel, r.divisor, r.total]));
+
+  const options = {
+    title: 'How many videos are played whilst embedded in articles?',
+    isStacked: 'percent',
+    colors: ['#fb0', '#333'],
+    height: 500
+  };
+
+  // Annoyingly we can't use material google.chart.Ratiobar as it doesn't support isStacked: 'percent'
+  var chart = new google.visualization.ColumnChart(document.getElementById('video-embed-plays'));
+  chart.draw(data, options);
+});
 
 
 function getArticleReadyVsPlayRatio(date) {
@@ -52,9 +126,9 @@ function getArticleReadyVsPlayRatio(date) {
   return Rx.DOM.ajax({ url, responseType: 'json' }).map(resp => {
     // This is just the way we're saving this information for now
     const mediaEvents = resp.response.find(row => row.tag === 'type/article');
-    return bar(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
+    return ratio(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
   }).catch(() => {
-    return Rx.Observable.of(bar(0, 0, dateLabel(date)));
+    return Rx.Observable.of(ratio(0, 0, dateLabel(date)));
   });
 }
 
@@ -73,7 +147,7 @@ function getCapiRatio(date) {
   });
 
   return Rx.Observable.combineLatest(total$, totalWithVideos$, (total, totalWithVideos) => {
-    return bar(total, totalWithVideos, dateLabel(date));
+    return ratio(total, totalWithVideos, dateLabel(date));
   });
 }
 
@@ -81,14 +155,9 @@ function dateLabel(date) {
   return `${moment(date).format('dd')} ${moment(date).format('D')}`;
 }
 
-function ratioLabel(total, segment) {
-  return `${numeral(segment).format('0a')}<br />of<br />${numeral(total).format('0a')}`;
-}
-
-function bar(total, segment, textLabel) {
-  const percent = Math.round((segment/total)*100);
-  const numberLabel = ratioLabel(total, segment);
-  return {total, segment, textLabel, numberLabel, percent};
+function ratio(total, divisor, textLabel) {
+  const percent = Math.round((divisor/total)*100);
+  return {total, divisor, textLabel, percent};
 }
 
 function getCapiTotal(params) {

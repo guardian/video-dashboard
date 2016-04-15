@@ -100,55 +100,22 @@
   <script id="app-template" type="text/ractive">
     <input type="month" name="date" value={{date}} />
 
-    <div class="bars-container">
-      <h1 class="bars-heading">How many articles have video embedded?</h1>
-      <div class="bars">
-        {{#embeddedVideoBars}}
-          {{>bar}}
-        {{/embeddedVideoBars}}
-      </div>
-      <ul class="key">
-        <li class="key__item key__item--total">All content produced</li>
-        <li class="key__item key__item--segment">Content with video embedded</li>
-      </ul>
-    </div>
-
-
-    <div class="bars-container">
-      <h1 class="bars-heading">How many videos are played whilst embedded in articles?{{>beta}}</h1>
-      <div class="bars">
-        {{#readyVsPlayBars}}
-          {{>bar}}
-        {{/readyVsPlayBars}}
-      </div>
-      <ul class="key">
-        <li class="key__item key__item--total">Total videos requested on articles</li>
-        <li class="key__item key__item--segment">Videos played on articles</li>
-      </ul>
-    </div>
-
-    {{#partial bar}}
-      <div class="bar">
-        <div class="bar__label">{{textLabel}}</div>
-        <div class="bar__full">
-          <div class="bar__percent" style="height: {{percent}}%">
-            {{percent}}%
-          </div>
-          <div class="bar__ratio" title="{{segment}} / {{total}}">{{{numberLabel}}}</div>
-        </div>
-      </div>
-    {{/partial}}
-
-    {{#partial beta}}
-      <span class="β" title="βeta - treat with caution">β</span>
-    {{/partial}}
+    <div id="play-embed-quantities"></div>
+    <div id="embed-ratios"></div>
+    <div id="video-embed-plays"></div>
   </script>
 
 
   <script src="jspm_packages/system.js"></script>
   <script src="config.js"></script>
+  <script type="text/javascript" src="//www.gstatic.com/charts/loader.js"></script>
   <script>
-      System.import('app/app').catch(e => console.log(e));
+      google.charts.load('current', {packages: ['corechart', 'line', 'bar']});
+      google.charts.setOnLoadCallback(go);
+
+      function go() {
+        System.import('app/app').catch(e => console.log(e));
+      }
   </script>
 
 </body>
