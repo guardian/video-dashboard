@@ -6,6 +6,7 @@ import numeral from 'numeral';
 
 import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
+import {DoubleLineChartOpts, ChartColumn, ChartData, RatioGraphOpts, drawRatioChart} from './charts';
 
 const google = window.google;
 
@@ -54,69 +55,40 @@ ratios.erRatios$.subscribe(({embeddedVideoRatios, readyVsPlayRatios}) => {
   const playRatios = readyVsPlayRatios.map(b => ratio(maxPlays, b.divisor, b.textLabel));
   const embedPlayRatios = embedRatios.map((r, i) => ({embed: r, play: playRatios[i]}));
 
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Day');
-  data.addColumn('number', 'Embeds');
-  data.addColumn('number', 'Plays');
-  data.addRows(embedPlayRatios.map(r => [r.play.textLabel, r.embed.divisor, r.play.divisor]));
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Articles published with video embedded'),
+    ChartColumn('number', 'Number of plays on articles')
+  ], embedPlayRatios.map(r => [r.play.textLabel, r.embed.divisor, r.play.divisor]));
 
-  const options = {
-    chart: {
-      title: 'If we increase embeded videos in articles, do we get more plays?'
-    },
-    axes: {
-      y: {
-        0: {range: {min: 0, max: maxEmbeds}},
-        1: {range: {min: 0, max: maxPlays}}
-      }
-    },
-    series: {
-      0: {axis: '0', targetAxisIndex: 0},
-      1: {axis: '1', targetAxisIndex: 1}
-    },
-    colors: ['#fb0', '#333']
-  };
+  const options = DoubleLineChartOpts('If we increase embeded videos in articles, do we get more plays?', maxEmbeds, maxPlays);
 
   const chart = new google.charts.Line(document.getElementById('play-embed-quantities'));
   chart.draw(data, options);
 });
 
-app.observe('date', date => ratios.setDate(date));
 ratios.embeddedVideoRatios$.subscribe(embeddedVideoRatios => {
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Day');
-  data.addColumn('number', 'Plays');
-  data.addColumn('number', 'Published');
-  data.addRows(embeddedVideoRatios.map(r => [r.textLabel, r.divisor, r.total]));
+  const max = embeddedVideoRatios.reduce((prev, next) => Math.max(prev, next.total), 0);
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Articles published with video embedded'),
+    ChartColumn('number', 'Articles published')
+  ], embeddedVideoRatios.map(r => [r.textLabel, r.divisor, r.total]));
 
-  const options = {
-    title: 'In what percentage of articles are we embedding video?',
-    isStacked: 'percent',
-    colors: ['#fb0', '#333'],
-    height: 500
-  };
-
-  // Annoyingly we can't use material google.chart.Ratio as it doesn't support isStacked: 'percent'
-  var chart = new google.visualization.ColumnChart(document.getElementById('embed-ratios'));
+  const options = RatioGraphOpts('How many videos are we embedding in content?');
+  const chart = new google.visualization.AreaChart(document.getElementById('embed-ratios'));
   chart.draw(data, options);
 });
 
 ratios.readyVsPlayRatios$.subscribe(readyVsPlayRatios => {
-  const data = new google.visualization.DataTable();
-  data.addColumn('string', 'Day');
-  data.addColumn('number', 'Plays');
-  data.addColumn('number', 'Published');
-  data.addRows(readyVsPlayRatios.map(r => [r.textLabel, r.divisor, r.total]));
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Plays'),
+    ChartColumn('number', 'Requests')
+  ], readyVsPlayRatios.map(r => [r.textLabel, r.divisor, r.total]));
 
-  const options = {
-    title: 'How many videos are played whilst embedded in articles?',
-    isStacked: 'percent',
-    colors: ['#fb0', '#333'],
-    height: 500
-  };
-
-  // Annoyingly we can't use material google.chart.Ratiobar as it doesn't support isStacked: 'percent'
-  var chart = new google.visualization.ColumnChart(document.getElementById('video-embed-plays'));
+  const options = RatioGraphOpts('How many videos are played whilst embedded in articles?');
+  const chart = new google.visualization.AreaChart(document.getElementById('video-embed-plays'));
   chart.draw(data, options);
 });
 
@@ -164,3 +136,6 @@ function getCapiTotal(params) {
   return Rx.DOM.ajax({ url: `${apiRoot}?${buildQS(params)}`, responseType: 'json' })
     .map(data => data.response.response.total);
 }
+
+
+app.observe('date', date => ratios.setDate(date));

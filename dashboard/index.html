@@ -6,91 +6,18 @@
       body {
         color: #333;
         font-size: 12px;
-        padding: 5px;
+        padding: 0;
       }
-
-      .bars-heading {
-        margin: 0 0 5px 0;
-      }
-      .bars-container {
-        border-bottom: 2px #d3d3d3 solid;
-        margin-top: 20px;
+      .charts {
         padding: 10px;
       }
-      .bars {
-        display: flex;
-        margin-bottom: 5px;
+      .chart {
         width: 100%;
       }
-      .bar {
-        flex-grow: 1;
-        border: 1px solid #ccc;
-        overflow: hidden;
-        font-family: monospace;
-        text-align: center;
-      }
-      .bar__full {
-        background: #333;
-        display: flex;
-        flex-direction: column-reverse;
-        height: 500px;
-        width: 100%;
-        color: #fff;
-      }
-      .bar__percent {
-        background: #fb0;
-        width: 100%;
-        color: #333;
-        display: flex;
-        flex-direction: column-reverse;
-        padding: 10px 0;
-      }
-      .bar__label {
-        padding: 8px;
-      }
-      .bar__ratio {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-        padding: 10px 0;
-        flex-grow: 1;
-      }
-
-      .key {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      .key__item {
-
-      }
-      .key__item::before {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background: #000;
-        content: ' ';
-        margin-right: 10px;
-        vertical-align: middle;
-      }
-      .key__item--total::before {
-        background: #333;
-      }
-      .key__item--segment::before {
-        background: #fb0;
-      }
-
-      .β {
-        vertical-align: super;
-        background: red;
-        color: #f1f1f1;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        width: 24px;
-        height: 24px;
-        text-align: center;
+      .topbar {
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 10px;
       }
     </style>
 </head>
@@ -98,11 +25,14 @@
 <body>
   <div id="app"></div>
   <script id="app-template" type="text/ractive">
-    <input type="month" name="date" value={{date}} />
-
-    <div id="play-embed-quantities"></div>
-    <div id="embed-ratios"></div>
-    <div id="video-embed-plays"></div>
+    <div class="topbar">
+      <input type="month" name="date" value={{date}} />
+    </div>
+    <div class="charts">
+      <div class="chart" id="play-embed-quantities"></div>
+      <div class="chart" id="embed-ratios"></div>
+      <div class="chart" id="video-embed-plays"></div>
+    </div>
   </script>
 
 
