@@ -4,14 +4,10 @@ Parameters:
   WhitelistedIp:
     Type: String
     Description: IP range for the office
-  VideoDashboardUri:
-    Type: String
-    Description: URI of the video dashboard
 Resources:
   VideoDashboardBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: {Ref: VideoDashboardUri}
       AccessControl: Private
       CorsConfiguration:
         CorsRules:
