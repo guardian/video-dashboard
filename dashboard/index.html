@@ -6,91 +6,18 @@
       body {
         color: #333;
         font-size: 12px;
-        padding: 5px;
+        padding: 0;
       }
-
-      .bars-heading {
-        margin: 0 0 5px 0;
-      }
-      .bars-container {
-        border-bottom: 2px #d3d3d3 solid;
-        margin-top: 20px;
+      .charts {
         padding: 10px;
       }
-      .bars {
-        display: flex;
-        margin-bottom: 5px;
+      .chart {
         width: 100%;
       }
-      .bar {
-        flex-grow: 1;
-        border: 1px solid #ccc;
-        overflow: hidden;
-        font-family: monospace;
-        text-align: center;
-      }
-      .bar__full {
-        background: #333;
-        display: flex;
-        flex-direction: column-reverse;
-        height: 500px;
-        width: 100%;
-        color: #fff;
-      }
-      .bar__percent {
-        background: #fb0;
-        width: 100%;
-        color: #333;
-        display: flex;
-        flex-direction: column-reverse;
-        padding: 10px 0;
-      }
-      .bar__label {
-        padding: 8px;
-      }
-      .bar__ratio {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-        padding: 10px 0;
-        flex-grow: 1;
-      }
-
-      .key {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-      .key__item {
-
-      }
-      .key__item::before {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        background: #000;
-        content: ' ';
-        margin-right: 10px;
-        vertical-align: middle;
-      }
-      .key__item--total::before {
-        background: #333;
-      }
-      .key__item--segment::before {
-        background: #fb0;
-      }
-
-      .β {
-        vertical-align: super;
-        background: red;
-        color: #f1f1f1;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        width: 24px;
-        height: 24px;
-        text-align: center;
+      .topbar {
+        padding: 10px;
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 10px;
       }
     </style>
 </head>
@@ -98,57 +25,27 @@
 <body>
   <div id="app"></div>
   <script id="app-template" type="text/ractive">
-    <input type="month" name="date" value={{date}} />
-
-    <div class="bars-container">
-      <h1 class="bars-heading">How many articles have video embedded?</h1>
-      <div class="bars">
-        {{#embeddedVideoBars}}
-          {{>bar}}
-        {{/embeddedVideoBars}}
-      </div>
-      <ul class="key">
-        <li class="key__item key__item--total">All content produced</li>
-        <li class="key__item key__item--segment">Content with video embedded</li>
-      </ul>
+    <div class="topbar">
+      <input type="month" name="date" value={{date}} />
     </div>
-
-
-    <div class="bars-container">
-      <h1 class="bars-heading">How many videos are played whilst embedded in articles?{{>beta}}</h1>
-      <div class="bars">
-        {{#readyVsPlayBars}}
-          {{>bar}}
-        {{/readyVsPlayBars}}
-      </div>
-      <ul class="key">
-        <li class="key__item key__item--total">Total videos requested on articles</li>
-        <li class="key__item key__item--segment">Videos played on articles</li>
-      </ul>
+    <div class="charts">
+      <div class="chart" id="play-embed-quantities"></div>
+      <div class="chart" id="embed-ratios"></div>
+      <div class="chart" id="video-embed-plays"></div>
     </div>
-
-    {{#partial bar}}
-      <div class="bar">
-        <div class="bar__label">{{textLabel}}</div>
-        <div class="bar__full">
-          <div class="bar__percent" style="height: {{percent}}%">
-            {{percent}}%
-          </div>
-          <div class="bar__ratio" title="{{segment}} / {{total}}">{{{numberLabel}}}</div>
-        </div>
-      </div>
-    {{/partial}}
-
-    {{#partial beta}}
-      <span class="β" title="βeta - treat with caution">β</span>
-    {{/partial}}
   </script>
 
 
   <script src="jspm_packages/system.js"></script>
   <script src="config.js"></script>
+  <script type="text/javascript" src="//www.gstatic.com/charts/loader.js"></script>
   <script>
-      System.import('app/app').catch(e => console.log(e));
+      google.charts.load('current', {packages: ['corechart', 'line', 'bar']});
+      google.charts.setOnLoadCallback(go);
+
+      function go() {
+        System.import('app/app').catch(e => console.log(e));
+      }
   </script>
 
 </body>

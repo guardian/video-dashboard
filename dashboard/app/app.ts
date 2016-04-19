@@ -6,19 +6,24 @@ import numeral from 'numeral';
 
 import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
+import {DoubleLineChartOpts, ChartColumn, ChartData, RatioGraphOpts, drawRatioChart} from './charts';
+
+const google = window.google;
 
 const app = new Ractive({
   el: '#app',
   template: '#app-template',
   data: {
-    date: getMonth(moment()),
-    bars: []
+    date: getMonth(moment())
   }
 });
 
-const embeddedVideoBars$ = new Rx.Subject();
-const readyVsPlayBars$ = new Rx.Subject();
-const bars = {
+const embeddedVideoRatios$ = new Rx.Subject();
+const readyVsPlayRatios$ = new Rx.Subject();
+const erRatios$ = embeddedVideoRatios$.withLatestFrom(readyVsPlayRatios$,
+  (embeddedVideoRatios, readyVsPlayRatios) => ({embeddedVideoRatios, readyVsPlayRatios}));
+
+const ratios = {
   setDate: startDate => {
     const daysInMonth = moment(startDate).daysInMonth();
     const dates = Array.from(Array(daysInMonth).keys())
@@ -27,24 +32,65 @@ const bars = {
 
     const embeddedVideoRatios = dates.map(getCapiRatio);
     const embeddedVideoSubscription = Rx.Observable.combineLatest(...embeddedVideoRatios).subscribe(bs => {
-      embeddedVideoBars$.onNext(bs);
+      embeddedVideoRatios$.onNext(bs);
       embeddedVideoSubscription.dispose();
     });
 
     const articleReadyVsPlayRatios = dates.map(getArticleReadyVsPlayRatio);
     const articleReadyVsPlaySubscription = Rx.Observable.combineLatest(...articleReadyVsPlayRatios).subscribe(bs => {
-      readyVsPlayBars$.onNext(bs);
+      readyVsPlayRatios$.onNext(bs);
       articleReadyVsPlaySubscription.dispose();
     });
   },
 
-  embeddedVideoBars$,
-  readyVsPlayBars$
+  embeddedVideoRatios$,
+  readyVsPlayRatios$,
+  erRatios$
 };
 
-app.observe('date', date => bars.setDate(date));
-bars.embeddedVideoBars$.subscribe(embeddedVideoBars => app.set('embeddedVideoBars', embeddedVideoBars));
-bars.readyVsPlayBars$.subscribe(readyVsPlayBars => app.set('readyVsPlayBars', readyVsPlayBars));
+ratios.erRatios$.subscribe(({embeddedVideoRatios, readyVsPlayRatios}) => {
+  const maxEmbeds = embeddedVideoRatios.reduce((prev, next) => Math.max(prev, next.total), 0);
+  const maxPlays = readyVsPlayRatios.reduce((prev, next) => Math.max(prev, next.divisor), 0);
+  const embedRatios = embeddedVideoRatios.map(b => ratio(maxEmbeds, b.total, b.textLabel));
+  const playRatios = readyVsPlayRatios.map(b => ratio(maxPlays, b.divisor, b.textLabel));
+  const embedPlayRatios = embedRatios.map((r, i) => ({embed: r, play: playRatios[i]}));
+
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Articles published with video embedded'),
+    ChartColumn('number', 'Number of plays on articles')
+  ], embedPlayRatios.map(r => [r.play.textLabel, r.embed.divisor, r.play.divisor]));
+
+  const options = DoubleLineChartOpts('If we increase embeded videos in articles, do we get more plays?', maxEmbeds, maxPlays);
+
+  const chart = new google.charts.Line(document.getElementById('play-embed-quantities'));
+  chart.draw(data, options);
+});
+
+ratios.embeddedVideoRatios$.subscribe(embeddedVideoRatios => {
+  const max = embeddedVideoRatios.reduce((prev, next) => Math.max(prev, next.total), 0);
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Articles published with video embedded'),
+    ChartColumn('number', 'Articles published')
+  ], embeddedVideoRatios.map(r => [r.textLabel, r.divisor, r.total]));
+
+  const options = RatioGraphOpts('How many videos are we embedding in content?');
+  const chart = new google.visualization.AreaChart(document.getElementById('embed-ratios'));
+  chart.draw(data, options);
+});
+
+ratios.readyVsPlayRatios$.subscribe(readyVsPlayRatios => {
+  const data = ChartData([
+    ChartColumn('string', 'Day'),
+    ChartColumn('number', 'Plays'),
+    ChartColumn('number', 'Requests')
+  ], readyVsPlayRatios.map(r => [r.textLabel, r.divisor, r.total]));
+
+  const options = RatioGraphOpts('How many videos are played whilst embedded in articles?');
+  const chart = new google.visualization.AreaChart(document.getElementById('video-embed-plays'));
+  chart.draw(data, options);
+});
 
 
 function getArticleReadyVsPlayRatio(date) {
@@ -52,9 +98,9 @@ function getArticleReadyVsPlayRatio(date) {
   return Rx.DOM.ajax({ url, responseType: 'json' }).map(resp => {
     // This is just the way we're saving this information for now
     const mediaEvents = resp.response.find(row => row.tag === 'type/article');
-    return bar(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
+    return ratio(mediaEvents.ready, mediaEvents.plays, dateLabel(date))
   }).catch(() => {
-    return Rx.Observable.of(bar(0, 0, dateLabel(date)));
+    return Rx.Observable.of(ratio(0, 0, dateLabel(date)));
   });
 }
 
@@ -73,7 +119,7 @@ function getCapiRatio(date) {
   });
 
   return Rx.Observable.combineLatest(total$, totalWithVideos$, (total, totalWithVideos) => {
-    return bar(total, totalWithVideos, dateLabel(date));
+    return ratio(total, totalWithVideos, dateLabel(date));
   });
 }
 
@@ -81,17 +127,15 @@ function dateLabel(date) {
   return `${moment(date).format('dd')} ${moment(date).format('D')}`;
 }
 
-function ratioLabel(total, segment) {
-  return `${numeral(segment).format('0a')}<br />of<br />${numeral(total).format('0a')}`;
-}
-
-function bar(total, segment, textLabel) {
-  const percent = Math.round((segment/total)*100);
-  const numberLabel = ratioLabel(total, segment);
-  return {total, segment, textLabel, numberLabel, percent};
+function ratio(total, divisor, textLabel) {
+  const percent = Math.round((divisor/total)*100);
+  return {total, divisor, textLabel, percent};
 }
 
 function getCapiTotal(params) {
   return Rx.DOM.ajax({ url: `${apiRoot}?${buildQS(params)}`, responseType: 'json' })
     .map(data => data.response.response.total);
 }
+
+
+app.observe('date', date => ratios.setDate(date));
