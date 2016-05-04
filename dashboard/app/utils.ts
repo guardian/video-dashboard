@@ -1,7 +1,8 @@
 export function getMonth(moment) {
   return moment.format('YYYY-MM');
 }
-export function formatDate(moment) {
+
+export function formatDate(moment): string {
   return moment.format('YYYY-MM-DD');
 }
 

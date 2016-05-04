@@ -10,9 +10,14 @@ Parameters:
 Resources:
   VideoDashboardBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: "Retain"
     Properties:
       BucketName: {Ref: VideoDashboardUri}
       AccessControl: Private
+      WebsiteConfiguration:
+        IndexDocument: "index.html"
+        RedirectAllRequestsTo:
+          HostName: {Ref: VideoDashboardUri}
       CorsConfiguration:
         CorsRules:
           - AllowedMethods:

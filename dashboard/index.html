@@ -11,13 +11,17 @@
       .charts {
         padding: 10px;
       }
+      .chart-container {
+        margin-top: 10px;
+      }
       .chart {
         width: 100%;
+        height: 300px;
       }
-      .topbar {
-        padding: 10px;
-        border-bottom: 1px solid #ccc;
-        margin-bottom: 10px;
+
+      .dashboard-layout .mdl-layout__header {
+        background-color: transparent;
+        padding-top: 5px;
       }
     </style>
 </head>
@@ -25,26 +29,71 @@
 <body>
   <div id="app"></div>
   <script id="app-template" type="text/ractive">
-    <div class="topbar">
-      <input type="month" name="date" value={{date}} />
-    </div>
-    <div class="charts">
-      <div class="chart" id="play-embed-quantities"></div>
-      <div class="chart" id="embed-ratios"></div>
-      <div class="chart" id="video-embed-plays"></div>
+    <div class="dashboard-layout mdl-layout mdl-js-layout">
+      <header class="mdl-layout__header">
+        <div class="mdl-layout__header-row">
+          <form on-submit="setDateRange">
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" id="startDate" type="date" name="startDate" value="{{startDate}}" />
+              <label class="mdl-textfield__label" for="startDate">From</label>
+            </div>
+
+            <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
+              <input class="mdl-textfield__input" id="endDate" type="date" name="endDate" value="{{endDate}}" />
+              <label class="mdl-textfield__label" for="endDate">Until</label>
+            </div>
+
+            <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored">Fetch me the goodies!</button>
+          </form>
+        </div>
+      </header>
+      <main class="mdl-layout__content">
+        <div class="mdl-grid">
+          <div class="mdl-cell mdl-cell--6-col">
+            <h4>{{articlesWithVideoTotal}}</h4>
+            Videos embedded in articles
+          </div>
+          <div class="mdl-cell mdl-cell--6-col">
+            <h4>{{formatNumber(mediaEvents.total.plays)}} total video plays</h4>
+
+            <table class="mdl-data-table mdl-shadow--2dp">
+              <thead>
+                <tr>
+                  <th>In articles</th>
+                  <th>Video pages</th>
+                  <th>Fronts</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{formatNumber(mediaEvents.articles.plays)}}</td>
+                  <td>{{formatNumber(mediaEvents.videoPages.plays)}}</td>
+                  <td>{{formatNumber(mediaEvents.fronts.plays)}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="chart-container">
+              <div id="video-plays" class="chart"></div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   </script>
 
 
   <script src="jspm_packages/system.js"></script>
   <script src="config.js"></script>
-  <script type="text/javascript" src="//www.gstatic.com/charts/loader.js"></script>
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+  <link rel="stylesheet" href="https://code.getmdl.io/1.1.3/material.amber-blue.min.css" />
+  <script defer src="https://code.getmdl.io/1.1.3/material.min.js"></script>
   <script>
       google.charts.load('current', {packages: ['corechart', 'line', 'bar']});
       google.charts.setOnLoadCallback(go);
 
       function go() {
-        System.import('app/app').catch(e => console.log(e));
+        System.import('app/app').catch(e => { throw e; });
       }
   </script>
 
