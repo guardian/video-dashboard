@@ -12,8 +12,9 @@ const google = window.google;
 const componentHandler = window.componentHandler;
 
 const articlesWithVideosTotal$ = new Rx.Subject();
+const articlesWithVideos$ = new Rx.Subject();
+const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
-const me$ = new Rx.Subject();
 const stats = {
   setDate: (startDate, endDate) => {
     const daysInMonth = moment(startDate).daysInMonth();
@@ -23,7 +24,9 @@ const stats = {
 
     const articlesWithVideoDays = dates.map(articlesWithVideo$);
     const articlesWithVideoSub$ = Rx.Observable.combineLatest(...articlesWithVideoDays).subscribe(articles => {
-      const total = articles.reduce((prev, next) => prev + next);
+      const total = articles.reduce((prev, next) => prev + next.total, 0);
+
+      articlesWithVideos$.onNext(articles);
       articlesWithVideosTotal$.onNext(total);
       articlesWithVideoSub$.dispose();
     });
@@ -36,9 +39,9 @@ const stats = {
       const videoPages = addMediaEvents(mediaEvents.map(mediaEvent => mediaEvent.videoPages));
       const total = addMediaEvents([articles, fronts, videoPages]);
 
-      me$.onNext(mediaEvents);
+      mediaEvents$.onNext(mediaEvents);
 
-      mediaEvents$.onNext({total, articles, fronts, videoPages});
+      mediaEventTotals$.onNext({total, articles, fronts, videoPages});
       mediaEventsSub$.dispose();
     });
 
@@ -54,12 +57,11 @@ const app = new Ractive({
     startDate,
     endDate,
     articlesWithVideoTotal: 0,
-    formatNumber: number => numeral(number).format('0,0')
+    formatNumber: number => numeral(number).format('0,0'),
+    percent: (amount, of) => { return Math.round((amount / of) * 100) }
   }
 });
 
-const startDate$ = new Rx.Subject();
-const endDate$ = new Rx.Subject();
 const dateRange$ = new Rx.Subject();
 dateRange$.startWith({startDate, endDate}).subscribe(({startDate, endDate}) => stats.setDate(startDate, endDate));
 app.on('setDateRange', ev => {
@@ -72,10 +74,33 @@ app.on('setDateRange', ev => {
 
 // Write totals
 articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
-mediaEvents$.subscribe(mediaEvents => app.set('mediaEvents', mediaEvents));
+mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
-// Draw graphs
-me$.subscribe(mediaEvents => {
+
+// TODO: relate this as a ratio to content produced
+articlesWithVideos$.subscribe(articlesWithVideos => {
+  const chartData = articlesWithVideos.map(articleWithVideos => [
+    articleWithVideos.date, articleWithVideos.total
+  ]);
+  const data = google.visualization.arrayToDataTable([
+    ['Day', 'Produced']
+  ].concat(chartData));
+
+  const options = {
+    title: 'Content produced with video embedded',
+    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
+    vAxis: {minValue: 0},
+    legend: {position: 'bottom'},
+    chartArea: {'width': '100%'},
+    colors: ['#fb0', '#333', '#4bc6df']
+  };
+
+  const chart = new google.visualization.AreaChart(document.getElementById('video-embeds'));
+  chart.draw(data, options);
+});
+
+// Play graph
+mediaEvents$.subscribe(mediaEvents => {
   const chartData = mediaEvents.map(mediaEvent => [
     mediaEvent.date, mediaEvent.articles.plays, mediaEvent.videoPages.plays, mediaEvent.fronts.plays
   ]);
@@ -89,10 +114,56 @@ me$.subscribe(mediaEvents => {
     vAxis: {minValue: 0},
     legend: {position: 'bottom'},
     chartArea: {'width': '100%'},
+    colors: ['#fb0', '#333', '#4bc6df']
   };
 
   const chart = new google.visualization.AreaChart(document.getElementById('video-plays'));
   chart.draw(data, options);
 });
+
+// Request vs play on articles
+mediaEvents$.subscribe(mediaEvents => {
+  const chartData = mediaEvents.map(mediaEvent => [
+    mediaEvent.date, mediaEvent.articles.ready, mediaEvent.articles.plays
+  ]);
+  const data = google.visualization.arrayToDataTable([
+    ['Day', 'Served', 'Played']
+  ].concat(chartData));
+
+  const options = {
+    title: 'How many videos were played in articles vs served',
+    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
+    vAxis: {minValue: 0},
+    legend: {position: 'bottom'},
+    chartArea: {'width': '100%'},
+    colors: ['#fb0', '#333', '#4bc6df']
+  };
+
+  const chart = new google.visualization.AreaChart(document.getElementById('article-plays-vs-ready'));
+  chart.draw(data, options);
+});
+
+// Request vs play on video pages
+mediaEvents$.subscribe(mediaEvents => {
+  const chartData = mediaEvents.map(mediaEvent => [
+    mediaEvent.date, mediaEvent.videoPages.ready, mediaEvent.videoPages.plays
+  ]);
+  const data = google.visualization.arrayToDataTable([
+    ['Day', 'Served', 'Played']
+  ].concat(chartData));
+
+  const options = {
+    title: 'How many videos were played on video pages articles vs served',
+    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
+    vAxis: {minValue: 0},
+    legend: {position: 'bottom'},
+    chartArea: {'width': '100%'},
+    colors: ['#fb0', '#333', '#4bc6df']
+  };
+
+  const chart = new google.visualization.AreaChart(document.getElementById('video-plays-vs-ready'));
+  chart.draw(data, options);
+});
+
 
 componentHandler.upgradeDom();

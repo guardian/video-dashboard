@@ -9,7 +9,7 @@ export const articlesWithVideo$ = date => {
     'to-date': date,
     'type': 'article|liveblog',
     'contains-element': 'videos'
-  });
+  }).map(total => ({date, total}));
 };
 
 export const allMediaEvents$ = date => {
