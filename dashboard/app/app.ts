@@ -2,6 +2,7 @@ import Rx from 'rx';
 import "rx-dom";
 import Ractive from 'ractive';
 import moment from 'moment';
+import 'moment-range';
 import numeral from 'numeral';
 
 import {formatDate} from './utils';
@@ -19,9 +20,11 @@ const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
 const stats = {
   setDate: (startDate, endDate) => {
-    const daysInMonth = moment(startDate).daysInMonth();
-    const dates = Array.from(Array(daysInMonth).keys())
-      .map(i => formatDate(moment(startDate).startOf('month').add(i, 'days')))
+    const daysInRange = [];
+    moment.range([startDate, endDate]).by('days', m => daysInRange.push(m));
+
+    const dates = Array.from(daysInRange.keys())
+      .map(i => formatDate(moment(startDate).add(i, 'days')))
       .filter(date => moment(date).isSameOrBefore(moment(endDate)));
 
     const articlesDays = dates.map(articles$);
@@ -89,7 +92,7 @@ articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', to
 articlesTotal$.subscribe(total => app.set('articlesTotal', total));
 mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
-Rx.Observable.combineLatest(articlesWithVideos$, allArticles$, (articlesWithVideos, articles) => ({articlesWithVideos, articles})).subscribe(({articlesWithVideos, articles}) => {
+articlesWithVideos$.withLatestFrom(allArticles$, (articlesWithVideos, articles) => ({articlesWithVideos, articles})).subscribe(({articlesWithVideos, articles}) => {
   // TODO: zip
   const chartData = articlesWithVideos.map((articleWithVideos, i) => [
     articleWithVideos.date, articles[i].total, articleWithVideos.total

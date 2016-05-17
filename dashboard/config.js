@@ -27,7 +27,8 @@ System.config({
   },
 
   map: {
-    "moment": "npm:moment@2.12.0",
+    "moment": "npm:moment@2.13.0",
+    "moment-range": "npm:moment-range@2.2.0",
     "numeral": "npm:numeral@1.5.3",
     "ractive": "github:ractivejs/ractive@0.7.3",
     "rx": "npm:rx@4.1.0",
@@ -54,6 +55,9 @@ System.config({
     },
     "npm:inherits@2.0.1": {
       "util": "github:jspm/nodelibs-util@0.1.0"
+    },
+    "npm:moment-range@2.2.0": {
+      "moment": "npm:moment@2.13.0"
     },
     "npm:numeral@1.5.3": {
       "fs": "github:jspm/nodelibs-fs@0.1.2"
