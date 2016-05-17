@@ -3,6 +3,14 @@ import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
 import {MediaEvent, respToMediaEvent, addMediaEvents} from './MediaEvent';
 
+export const articles$ = date => {
+  return getCapiTotal$({
+    'from-date': date,
+    'to-date': date,
+    'type': 'article|liveblog'
+  }).map(total => ({date, total}));
+};
+
 export const articlesWithVideo$ = date => {
   return getCapiTotal$({
     'from-date': date,

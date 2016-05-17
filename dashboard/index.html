@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <title>Video dashboard</title>
     <style>
+
       body {
         color: #333;
         font-size: 12px;
@@ -27,7 +28,7 @@
     </style>
 </head>
 
-<body>
+<body class="video-dashboard">
   <div id="app"></div>
   <script id="app-template" type="text/ractive">
     <div class="dashboard-layout mdl-layout mdl-js-layout">
@@ -52,16 +53,21 @@
         <div class="mdl-grid">
 
           <div class="mdl-cell mdl-cell--6-col">
-            <h4>{{articlesWithVideoTotal}} videos embedded in articles</h4>
+            <h4>
+              How many articles are we embedding video into?
+              <b>{{percent(articlesWithVideoTotal, articlesTotal)}}%</b>
+            </h4>
 
             <table class="mdl-data-table mdl-shadow--2dp">
               <thead>
                 <tr>
-                  <th>Total</th>
+                  <th>Articles created, total</th>
+                  <th>With video embedded</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
+                  <td>{{articlesTotal}}</td>
                   <td>{{articlesWithVideoTotal}}</td>
                 </tr>
               </tbody>
@@ -72,11 +78,12 @@
           </div>
 
           <div class="mdl-cell mdl-cell--6-col">
-            <h4>{{formatNumber(mediaEventTotals.total.plays)}} total video plays</h4>
+            <h4>Where are videos being watched?</h4>
 
             <table class="mdl-data-table mdl-shadow--2dp">
               <thead>
                 <tr>
+                  <th>Total</th>
                   <th>In articles</th>
                   <th>Video pages</th>
                   <th>Fronts</th>
@@ -84,6 +91,7 @@
               </thead>
               <tbody>
                 <tr>
+                  <td>{{formatNumber(mediaEventTotals.total.plays)}}</td>
                   <td>{{formatNumber(mediaEventTotals.articles.plays)}}</td>
                   <td>{{formatNumber(mediaEventTotals.videoPages.plays)}}</td>
                   <td>{{formatNumber(mediaEventTotals.fronts.plays)}}</td>
@@ -96,13 +104,16 @@
           </div>
 
           <div class="mdl-cell mdl-cell--6-col">
-            <h4>{{percent(mediaEventTotals.articles.plays, mediaEventTotals.articles.ready)}}% videos played on article pages</h4>
+            <h4>
+              How often do people play content in article?
+              <b>{{percent(mediaEventTotals.articles.plays, mediaEventTotals.articles.ready)}}%</b>
+            </h4>
 
             <table class="mdl-data-table mdl-shadow--2dp">
               <thead>
                 <tr>
-                  <th>Served in article</th>
-                  <th>Played in article</th>
+                  <th>Videos requested in articles</th>
+                  <th>Videos started on articles</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,13 +129,16 @@
           </div>
 
           <div class="mdl-cell mdl-cell--6-col">
-            <h4>{{percent(mediaEventTotals.videoPages.plays, mediaEventTotals.videoPages.ready)}}% videos played on video pages</h4>
+            <h4>
+              How often do people play content on video pages?
+              <b>{{percent(mediaEventTotals.videoPages.plays, mediaEventTotals.videoPages.ready)}}%</b>
+            </h4>
 
             <table class="mdl-data-table mdl-shadow--2dp">
               <thead>
                 <tr>
-                  <th>Served to video page</th>
-                  <th>Played on video page</th>
+                  <th>Video pages requested</th>
+                  <th>Videos started in video pages</th>
                 </tr>
               </thead>
               <tbody>
