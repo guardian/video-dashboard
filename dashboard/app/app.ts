@@ -2,27 +2,48 @@ import Rx from 'rx';
 import "rx-dom";
 import Ractive from 'ractive';
 import moment from 'moment';
+import 'moment-range';
 import numeral from 'numeral';
 
 import {formatDate} from './utils';
-import {articlesWithVideo$, allMediaEvents$, totals$} from './stats';
+import {
+  articles$ as articlesStat$,
+  articlesWithVideo$ as articlesWithVideoStat$,
+  videosProduced$ as videosProducedStat$,
+  allMediaEvents$ as allMediaEventsStat$
+} from './stats';
 import {addMediaEvents} from './MediaEvent';
 
 const google = window.google;
 const componentHandler = window.componentHandler;
 
-const articlesWithVideosTotal$ = new Rx.Subject();
+const articles$ = new Rx.Subject();
+const articlesTotal$ = new Rx.Subject();
 const articlesWithVideos$ = new Rx.Subject();
+const articlesWithVideosTotal$ = new Rx.Subject();
+const videosProduced$ = new Rx.Subject();
+const videosProducedTotal$ = new Rx.Subject();
 const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
 const stats = {
   setDate: (startDate, endDate) => {
-    const daysInMonth = moment(startDate).daysInMonth();
-    const dates = Array.from(Array(daysInMonth).keys())
-      .map(i => formatDate(moment(startDate).startOf('month').add(i, 'days')))
+    const daysInRange = [];
+    moment.range([startDate, endDate]).by('days', m => daysInRange.push(m));
+
+    const dates = Array.from(daysInRange.keys())
+      .map(i => formatDate(moment(startDate).add(i, 'days')))
       .filter(date => moment(date).isSameOrBefore(moment(endDate)));
 
-    const articlesWithVideoDays = dates.map(articlesWithVideo$);
+    const articlesDays = dates.map(articlesStat$);
+    const articlesSub$ = Rx.Observable.combineLatest(...articlesDays).subscribe(articles => {
+      const total = articles.reduce((prev, next) => prev + next.total, 0);
+
+      articles$.onNext(articles);
+      articlesTotal$.onNext(total);
+      articlesSub$.dispose();
+    });
+
+    const articlesWithVideoDays = dates.map(articlesWithVideoStat$);
     const articlesWithVideoSub$ = Rx.Observable.combineLatest(...articlesWithVideoDays).subscribe(articles => {
       const total = articles.reduce((prev, next) => prev + next.total, 0);
 
@@ -31,7 +52,16 @@ const stats = {
       articlesWithVideoSub$.dispose();
     });
 
-    const mediaEventsDays = dates.map(allMediaEvents$);
+    const videosProducedDays = dates.map(videosProducedStat$);
+    const videosProducedSub$ = Rx.Observable.combineLatest(...videosProducedDays).subscribe(videosProduced => {
+      const total = videosProduced.reduce((prev, next) => prev + next.total, 0);
+
+      videosProduced$.onNext(videosProduced);
+      videosProducedTotal$.onNext(total);
+      videosProducedSub$.dispose();
+    });
+
+    const mediaEventsDays = dates.map(allMediaEventsStat$);
     const mediaEventsSub$ = Rx.Observable.combineLatest(...mediaEventsDays).subscribe(mediaEvents => {
       // We shouldn't be sending these all over, but it gives us the flexibility in the template for now
       const articles = addMediaEvents(mediaEvents.map(mediaEvent => mediaEvent.articles));
@@ -57,6 +87,7 @@ const app = new Ractive({
     startDate,
     endDate,
     articlesWithVideoTotal: 0,
+    articlesTotal: 0,
     formatNumber: number => numeral(number).format('0,0'),
     percent: (amount, of) => { return Math.round((amount / of) * 100) }
   }
@@ -73,26 +104,35 @@ app.on('setDateRange', ev => {
 
 
 // Write totals
+articlesTotal$.subscribe(total => app.set('articlesTotal', total));
 articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
+videosProducedTotal$.subscribe(total => app.set('videosProducedTotal', total));
 mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
+videosProduced$.subscribe(v => console.log(v))
 
-// TODO: relate this as a ratio to content produced
-articlesWithVideos$.subscribe(articlesWithVideos => {
-  const chartData = articlesWithVideos.map(articleWithVideos => [
-    articleWithVideos.date, articleWithVideos.total
+Rx.Observable.zip(
+  articlesWithVideos$,
+  articles$,
+  videosProduced$,
+  (articlesWithVideos, articles, videosProduced) =>
+  ({articlesWithVideos, articles, videosProduced}))
+  .subscribe(({articlesWithVideos, articles, videosProduced}) => {
+  // TODO: zip
+  const chartData = articles.map((article, i) => [
+    article.date, articles[i].total, articlesWithVideos[i].total, videosProduced[i].total
   ]);
+
   const data = google.visualization.arrayToDataTable([
-    ['Day', 'Produced']
+    ['Day', 'Articles created, total', 'With video embedded', 'videos produced']
   ].concat(chartData));
 
   const options = {
-    title: 'Content produced with video embedded',
     hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
     vAxis: {minValue: 0},
     legend: {position: 'bottom'},
     chartArea: {'width': '100%'},
-    colors: ['#fb0', '#333', '#4bc6df']
+    colors: ['#333', '#fb0', '#4bc6df']
   };
 
   const chart = new google.visualization.AreaChart(document.getElementById('video-embeds'));
@@ -105,16 +145,15 @@ mediaEvents$.subscribe(mediaEvents => {
     mediaEvent.date, mediaEvent.articles.plays, mediaEvent.videoPages.plays, mediaEvent.fronts.plays
   ]);
   const data = google.visualization.arrayToDataTable([
-    ['Day', 'Articles', 'Video pages', 'Fronts']
+    ['Day', 'Starts in article', 'Starts in video pages', 'Starts on fronts']
   ].concat(chartData));
 
   const options = {
-    title: 'Plays across different properties',
     hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
     vAxis: {minValue: 0},
     legend: {position: 'bottom'},
     chartArea: {'width': '100%'},
-    colors: ['#fb0', '#333', '#4bc6df']
+    colors: ['#333', '#fb0', '#4bc6df']
   };
 
   const chart = new google.visualization.AreaChart(document.getElementById('video-plays'));
@@ -127,16 +166,15 @@ mediaEvents$.subscribe(mediaEvents => {
     mediaEvent.date, mediaEvent.articles.ready, mediaEvent.articles.plays
   ]);
   const data = google.visualization.arrayToDataTable([
-    ['Day', 'Served', 'Played']
+    ['Day', 'Videos requested in articles', 'Videos started in articles']
   ].concat(chartData));
 
   const options = {
-    title: 'How many videos were played in articles vs served',
     hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
     vAxis: {minValue: 0},
     legend: {position: 'bottom'},
     chartArea: {'width': '100%'},
-    colors: ['#fb0', '#333', '#4bc6df']
+    colors: ['#333', '#fb0', '#4bc6df']
   };
 
   const chart = new google.visualization.AreaChart(document.getElementById('article-plays-vs-ready'));
@@ -149,16 +187,15 @@ mediaEvents$.subscribe(mediaEvents => {
     mediaEvent.date, mediaEvent.videoPages.ready, mediaEvent.videoPages.plays
   ]);
   const data = google.visualization.arrayToDataTable([
-    ['Day', 'Served', 'Played']
+    ['Day', 'Videos pages requested', 'Videos started in video pages']
   ].concat(chartData));
 
   const options = {
-    title: 'How many videos were played on video pages articles vs served',
     hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
     vAxis: {minValue: 0},
     legend: {position: 'bottom'},
     chartArea: {'width': '100%'},
-    colors: ['#fb0', '#333', '#4bc6df']
+    colors: ['#333', '#fb0', '#4bc6df']
   };
 
   const chart = new google.visualization.AreaChart(document.getElementById('video-plays-vs-ready'));
