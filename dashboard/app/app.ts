@@ -6,16 +6,23 @@ import 'moment-range';
 import numeral from 'numeral';
 
 import {formatDate} from './utils';
-import {articlesWithVideo$, allMediaEvents$, totals$, articles$} from './stats';
+import {
+  articles$ as articlesStat$,
+  articlesWithVideo$ as articlesWithVideoStat$,
+  videosProduced$ as videosProducedStat$,
+  allMediaEvents$ as allMediaEventsStat$
+} from './stats';
 import {addMediaEvents} from './MediaEvent';
 
 const google = window.google;
 const componentHandler = window.componentHandler;
 
+const articles$ = new Rx.Subject();
 const articlesTotal$ = new Rx.Subject();
-const articlesWithVideosTotal$ = new Rx.Subject();
-const allArticles$ = new Rx.Subject();
 const articlesWithVideos$ = new Rx.Subject();
+const articlesWithVideosTotal$ = new Rx.Subject();
+const videosProduced$ = new Rx.Subject();
+const videosProducedTotal$ = new Rx.Subject();
 const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
 const stats = {
@@ -27,16 +34,16 @@ const stats = {
       .map(i => formatDate(moment(startDate).add(i, 'days')))
       .filter(date => moment(date).isSameOrBefore(moment(endDate)));
 
-    const articlesDays = dates.map(articles$);
+    const articlesDays = dates.map(articlesStat$);
     const articlesSub$ = Rx.Observable.combineLatest(...articlesDays).subscribe(articles => {
       const total = articles.reduce((prev, next) => prev + next.total, 0);
 
-      allArticles$.onNext(articles);
+      articles$.onNext(articles);
       articlesTotal$.onNext(total);
       articlesSub$.dispose();
     });
 
-    const articlesWithVideoDays = dates.map(articlesWithVideo$);
+    const articlesWithVideoDays = dates.map(articlesWithVideoStat$);
     const articlesWithVideoSub$ = Rx.Observable.combineLatest(...articlesWithVideoDays).subscribe(articles => {
       const total = articles.reduce((prev, next) => prev + next.total, 0);
 
@@ -45,7 +52,16 @@ const stats = {
       articlesWithVideoSub$.dispose();
     });
 
-    const mediaEventsDays = dates.map(allMediaEvents$);
+    const videosProducedDays = dates.map(videosProducedStat$);
+    const videosProducedSub$ = Rx.Observable.combineLatest(...videosProducedDays).subscribe(videosProduced => {
+      const total = videosProduced.reduce((prev, next) => prev + next.total, 0);
+
+      videosProduced$.onNext(videosProduced);
+      videosProducedTotal$.onNext(total);
+      videosProducedSub$.dispose();
+    });
+
+    const mediaEventsDays = dates.map(allMediaEventsStat$);
     const mediaEventsSub$ = Rx.Observable.combineLatest(...mediaEventsDays).subscribe(mediaEvents => {
       // We shouldn't be sending these all over, but it gives us the flexibility in the template for now
       const articles = addMediaEvents(mediaEvents.map(mediaEvent => mediaEvent.articles));
@@ -88,18 +104,27 @@ app.on('setDateRange', ev => {
 
 
 // Write totals
-articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
 articlesTotal$.subscribe(total => app.set('articlesTotal', total));
+articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
+videosProducedTotal$.subscribe(total => app.set('videosProducedTotal', total));
 mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
-articlesWithVideos$.withLatestFrom(allArticles$, (articlesWithVideos, articles) => ({articlesWithVideos, articles})).subscribe(({articlesWithVideos, articles}) => {
+videosProduced$.subscribe(v => console.log(v))
+
+Rx.Observable.zip(
+  articlesWithVideos$,
+  articles$,
+  videosProduced$,
+  (articlesWithVideos, articles, videosProduced) =>
+  ({articlesWithVideos, articles, videosProduced}))
+  .subscribe(({articlesWithVideos, articles, videosProduced}) => {
   // TODO: zip
-  const chartData = articlesWithVideos.map((articleWithVideos, i) => [
-    articleWithVideos.date, articles[i].total, articleWithVideos.total
+  const chartData = articles.map((article, i) => [
+    article.date, articles[i].total, articlesWithVideos[i].total, videosProduced[i].total
   ]);
 
   const data = google.visualization.arrayToDataTable([
-    ['Day', 'Articles created, total', 'With video embedded']
+    ['Day', 'Articles created, total', 'With video embedded', 'videos produced']
   ].concat(chartData));
 
   const options = {

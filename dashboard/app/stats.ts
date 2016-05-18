@@ -3,22 +3,27 @@ import {apiRoot, dashboardApiRoot} from './config';
 import {buildQS, formatDate, getMonth} from './utils';
 import {MediaEvent, respToMediaEvent, addMediaEvents} from './MediaEvent';
 
-export const articles$ = date => {
-  return getCapiTotal$({
+export const articles$ = date =>
+  getCapiTotal$({
     'from-date': date,
     'to-date': date,
     'type': 'article|liveblog'
   }).map(total => ({date, total}));
-};
 
-export const articlesWithVideo$ = date => {
-  return getCapiTotal$({
+export const articlesWithVideo$ = date =>
+  getCapiTotal$({
     'from-date': date,
     'to-date': date,
     'type': 'article|liveblog',
     'contains-element': 'videos'
   }).map(total => ({date, total}));
-};
+
+export const videosProduced$ = date =>
+  getCapiTotal$({
+    'from-date': date,
+    'to-date': date,
+    'tag': 'type/video',
+  }).map(total => ({date, total}));
 
 export const allMediaEvents$ = date => {
   const frontsTotal$ = getFrontsMediaEvents$(date).catch(() => new MediaEvent());
