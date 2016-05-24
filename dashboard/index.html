@@ -155,12 +155,15 @@
             </div>
           </div>
 
-          <div class="mdl-cell mdl-cell--6-col">
+          <div class="mdl-cell mdl-cell--12-col">
             <h4>
               Can you show me the money?
-              <b>{{percent(totals.preroll_play, totals.plays)}}%</b>
-              <b>{{totals.preroll_play - totals.preroll_theend}} Don't finish</b>
             </h4>
+            <h5>
+              <div>{{percent(allMediaEventsTotals.preroll_play, allMediaEventsTotals.plays)}}% of plays have preroll</div>
+              <div>{{percent(allMediaEventsTotals.preroll_theend, allMediaEventsTotals.preroll_play)}}% of all prerolls finished</div>
+              <div>{{percent(allMediaEventsTotals.preroll_play - allMediaEventsTotals.preroll_theend, allMediaEventsTotals.plays)}}% of all video starts were lost to preroll</div>
+            </h5>
 
             <table class="mdl-data-table mdl-shadow--2dp">
               <thead>
@@ -172,13 +175,14 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>{{formatNumber(mediaEventTotals.videoPages.ready)}}</td>
-                  <td>{{formatNumber(mediaEventTotals.videoPages.plays)}}</td>
+                  <td>{{formatNumber(allMediaEventsTotals.plays)}}</td>
+                  <td>{{formatNumber(allMediaEventsTotals.preroll_play)}}</td>
+                  <td>{{formatNumber(allMediaEventsTotals.preroll_theend)}}</td>
                 </tr>
               </tbody>
             </table>
             <div class="chart-container">
-              <div id="video-plays-vs-ready" class="chart"></div>
+              <div id="money-chart" class="chart"></div>
             </div>
           </div>
 

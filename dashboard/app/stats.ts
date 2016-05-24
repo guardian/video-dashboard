@@ -39,13 +39,13 @@ export const allMediaEvents$ = date => {
 };
 
 export const totals$ = date => {
-  return getTotalsMediaEvents$(date);
+  return getTotalsMediaEvents$(date).map(mediaEvent => ({date, mediaEvent}));
 };
 
 function getTotalsMediaEvents$(date) {
   const url = `${dashboardApiRoot}/totals/${date.replace(/-/g, '/')}.json`;
   return Rx.DOM.ajax({ url, responseType: 'json' }).map(resp => {
-    return addMediaEvents(resp.response.map(respToMediaEvent));
+    return respToMediaEvent(resp.response[0]);
   });
 }
 
