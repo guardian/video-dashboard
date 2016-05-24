@@ -5,7 +5,9 @@ export function respToMediaEvent(resp) {
     resp.complete25,
     resp.complete50,
     resp.complete75,
-    resp.theend
+    resp.theend,
+    resp.preroll_play,
+    resp.preroll_theend
   );
 }
 
@@ -17,7 +19,9 @@ export function addMediaEvents(mediaEvents) {
       prev.complete25 + curr.complete25,
       prev.complete50 + curr.complete50,
       prev.complete75 + curr.complete75,
-      prev.theend + curr.theend
+      prev.theend + curr.theend,
+      prev.preroll_play + curr.preroll_play,
+      prev.preroll_theend + curr.preroll_theend
     )));
 }
 
@@ -28,6 +32,8 @@ export class MediaEvent {
     public complete25: number = 0,
     public complete50: number = 0,
     public complete75: number = 0,
-    public theend: number = 0
+    public theend: number = 0,
+    public preroll_play: number = 0,
+    public preroll_theend: number = 0
   ) {}
 }

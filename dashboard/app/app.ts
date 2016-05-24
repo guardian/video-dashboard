@@ -10,21 +10,72 @@ import {
   articles$ as articlesStat$,
   articlesWithVideo$ as articlesWithVideoStat$,
   videosProduced$ as videosProducedStat$,
-  allMediaEvents$ as allMediaEventsStat$
+  allMediaEvents$ as allMediaEventsStat$,
+  totals$ as totalsStat$
 } from './stats';
 import {addMediaEvents} from './MediaEvent';
 
 const google = window.google;
 const componentHandler = window.componentHandler;
 
-const articles$ = new Rx.Subject();
-const articlesTotal$ = new Rx.Subject();
-const articlesWithVideos$ = new Rx.Subject();
-const articlesWithVideosTotal$ = new Rx.Subject();
-const videosProduced$ = new Rx.Subject();
-const videosProducedTotal$ = new Rx.Subject();
+const createCapiTotalChart = (stat$) => {
+  const data$ = new Rx.Subject();
+  const total$ = new Rx.Subject();
+
+  function update(dates) {
+    const days = dates.map(stat$);
+    const sub$ = Rx.Observable.combineLatest(...days).subscribe(data => {
+      const total = data.reduce((prev, next) => prev + next.total, 0);
+      data$.onNext(data);
+      total$.onNext(total);
+      sub$.dispose();
+    });
+  }
+
+  return {data$, total$, update};
+};
+
+const createMediaEventChart = (stat$) => {
+  const data$ = new Rx.Subject();
+  const totals$ = new Rx.Subject();
+
+  function update(dates) {
+    const days = dates.map(stat$);
+    const sub$ = Rx.Observable.combineLatest(...days).subscribe(data => {
+      const totals = addMediaEvents(data.map(d => d.mediaEvent));
+
+      data$.onNext(data);
+      totals$.onNext(totals);
+      sub$.dispose();
+    });
+  }
+
+  return {data$, totals$, update};
+};
+
+const drawChart = (id: string, columns: string[], data: any[]) => {
+  const dataTable = google.visualization.arrayToDataTable([columns].concat(data));
+
+  const options = {
+    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
+    vAxis: {minValue: 0},
+    legend: {position: 'bottom'},
+    chartArea: {'width': '100%'},
+    colors: ['#333', '#fb0', '#4bc6df']
+  };
+
+  const chart = new google.visualization.AreaChart(document.getElementById(id));
+  chart.draw(dataTable, options);
+};
+
+
 const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
+const articles = createCapiTotalChart(articlesStat$);
+const articlesWithVideos = createCapiTotalChart(articlesWithVideoStat$);
+const videosProduced = createCapiTotalChart(videosProducedStat$);
+const allMediaEvents = createMediaEventChart(totalsStat$);
+
 const stats = {
   setDate: (startDate, endDate) => {
     const daysInRange = [];
@@ -34,32 +85,11 @@ const stats = {
       .map(i => formatDate(moment(startDate).add(i, 'days')))
       .filter(date => moment(date).isSameOrBefore(moment(endDate)));
 
-    const articlesDays = dates.map(articlesStat$);
-    const articlesSub$ = Rx.Observable.combineLatest(...articlesDays).subscribe(articles => {
-      const total = articles.reduce((prev, next) => prev + next.total, 0);
 
-      articles$.onNext(articles);
-      articlesTotal$.onNext(total);
-      articlesSub$.dispose();
-    });
-
-    const articlesWithVideoDays = dates.map(articlesWithVideoStat$);
-    const articlesWithVideoSub$ = Rx.Observable.combineLatest(...articlesWithVideoDays).subscribe(articles => {
-      const total = articles.reduce((prev, next) => prev + next.total, 0);
-
-      articlesWithVideos$.onNext(articles);
-      articlesWithVideosTotal$.onNext(total);
-      articlesWithVideoSub$.dispose();
-    });
-
-    const videosProducedDays = dates.map(videosProducedStat$);
-    const videosProducedSub$ = Rx.Observable.combineLatest(...videosProducedDays).subscribe(videosProduced => {
-      const total = videosProduced.reduce((prev, next) => prev + next.total, 0);
-
-      videosProduced$.onNext(videosProduced);
-      videosProducedTotal$.onNext(total);
-      videosProducedSub$.dispose();
-    });
+    articles.update(dates);
+    articlesWithVideos.update(dates);
+    videosProduced.update(dates);
+    allMediaEvents.update(dates);
 
     const mediaEventsDays = dates.map(allMediaEventsStat$);
     const mediaEventsSub$ = Rx.Observable.combineLatest(...mediaEventsDays).subscribe(mediaEvents => {
@@ -104,102 +134,52 @@ app.on('setDateRange', ev => {
 
 
 // Write totals
-articlesTotal$.subscribe(total => app.set('articlesTotal', total));
-articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
-videosProducedTotal$.subscribe(total => app.set('videosProducedTotal', total));
+articles.total$.subscribe(total => app.set('articlesTotal', total));
+articlesWithVideos.total$.subscribe(total => app.set('articlesWithVideoTotal', total));
+videosProduced.total$.subscribe(total => app.set('videosProducedTotal', total));
+allMediaEvents.totals$.subscribe(totals => app.set('allMediaEventsTotals', totals));
 mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
-videosProduced$.subscribe(v => console.log(v))
 
 Rx.Observable.zip(
-  articlesWithVideos$,
-  articles$,
-  videosProduced$,
+  articlesWithVideos.data$,
+  articles.data$,
+  videosProduced.data$,
   (articlesWithVideos, articles, videosProduced) =>
   ({articlesWithVideos, articles, videosProduced}))
   .subscribe(({articlesWithVideos, articles, videosProduced}) => {
   // TODO: zip
-  const chartData = articles.map((article, i) => [
+  drawChart('video-embeds', ['Day', 'Articles created, total', 'With video embedded', 'videos produced'], articles.map((article, i) => [
     article.date, articles[i].total, articlesWithVideos[i].total, videosProduced[i].total
-  ]);
-
-  const data = google.visualization.arrayToDataTable([
-    ['Day', 'Articles created, total', 'With video embedded', 'videos produced']
-  ].concat(chartData));
-
-  const options = {
-    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
-    vAxis: {minValue: 0},
-    legend: {position: 'bottom'},
-    chartArea: {'width': '100%'},
-    colors: ['#333', '#fb0', '#4bc6df']
-  };
-
-  const chart = new google.visualization.AreaChart(document.getElementById('video-embeds'));
-  chart.draw(data, options);
+  ]));
 });
 
 // Play graph
 mediaEvents$.subscribe(mediaEvents => {
-  const chartData = mediaEvents.map(mediaEvent => [
+  drawChart('video-plays', ['Day', 'Starts in article', 'Starts in video pages', 'Starts on fronts'], mediaEvents.map(mediaEvent => [
     mediaEvent.date, mediaEvent.articles.plays, mediaEvent.videoPages.plays, mediaEvent.fronts.plays
-  ]);
-  const data = google.visualization.arrayToDataTable([
-    ['Day', 'Starts in article', 'Starts in video pages', 'Starts on fronts']
-  ].concat(chartData));
-
-  const options = {
-    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
-    vAxis: {minValue: 0},
-    legend: {position: 'bottom'},
-    chartArea: {'width': '100%'},
-    colors: ['#333', '#fb0', '#4bc6df']
-  };
-
-  const chart = new google.visualization.AreaChart(document.getElementById('video-plays'));
-  chart.draw(data, options);
+  ]));
 });
 
 // Request vs play on articles
 mediaEvents$.subscribe(mediaEvents => {
-  const chartData = mediaEvents.map(mediaEvent => [
+  drawChart('article-plays-vs-ready', ['Day', 'Videos requested in articles', 'Videos started in articles'], mediaEvents.map(mediaEvent => [
     mediaEvent.date, mediaEvent.articles.ready, mediaEvent.articles.plays
-  ]);
-  const data = google.visualization.arrayToDataTable([
-    ['Day', 'Videos requested in articles', 'Videos started in articles']
-  ].concat(chartData));
-
-  const options = {
-    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
-    vAxis: {minValue: 0},
-    legend: {position: 'bottom'},
-    chartArea: {'width': '100%'},
-    colors: ['#333', '#fb0', '#4bc6df']
-  };
-
-  const chart = new google.visualization.AreaChart(document.getElementById('article-plays-vs-ready'));
-  chart.draw(data, options);
+  ]));
 });
 
 // Request vs play on video pages
 mediaEvents$.subscribe(mediaEvents => {
-  const chartData = mediaEvents.map(mediaEvent => [
+  drawChart('video-plays-vs-ready', ['Day', 'Videos pages requested', 'Videos started in video pages'], mediaEvents.map(mediaEvent => [
     mediaEvent.date, mediaEvent.videoPages.ready, mediaEvent.videoPages.plays
-  ]);
-  const data = google.visualization.arrayToDataTable([
-    ['Day', 'Videos pages requested', 'Videos started in video pages']
-  ].concat(chartData));
+  ]));
+});
 
-  const options = {
-    hAxis: {title: 'Day', showTextEvery: 1, textStyle: {fontSize: 8}},
-    vAxis: {minValue: 0},
-    legend: {position: 'bottom'},
-    chartArea: {'width': '100%'},
-    colors: ['#333', '#fb0', '#4bc6df']
-  };
-
-  const chart = new google.visualization.AreaChart(document.getElementById('video-plays-vs-ready'));
-  chart.draw(data, options);
+// Money chart
+allMediaEvents.data$.subscribe(data => {
+  drawChart('money-chart', ['Day', 'Starts', 'Preroll starts', 'Preroll ends'], data.map(e => [
+    e.date, e.mediaEvent.plays, e.mediaEvent.preroll_play, e.mediaEvent.preroll_theend
+  ]));
 });
 
 
