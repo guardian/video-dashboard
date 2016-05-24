@@ -155,6 +155,33 @@
             </div>
           </div>
 
+          <div class="mdl-cell mdl-cell--6-col">
+            <h4>
+              Can you show me the money?
+              <b>{{percent(totals.preroll_play, totals.plays)}}%</b>
+              <b>{{totals.preroll_play - totals.preroll_theend}} Don't finish</b>
+            </h4>
+
+            <table class="mdl-data-table mdl-shadow--2dp">
+              <thead>
+                <tr>
+                  <th>Video starts</th>
+                  <th>Preroll plays</th>
+                  <th>Preroll end</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{formatNumber(mediaEventTotals.videoPages.ready)}}</td>
+                  <td>{{formatNumber(mediaEventTotals.videoPages.plays)}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="chart-container">
+              <div id="video-plays-vs-ready" class="chart"></div>
+            </div>
+          </div>
+
 
         </div>
       </main>

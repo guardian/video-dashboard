@@ -10,21 +10,44 @@ import {
   articles$ as articlesStat$,
   articlesWithVideo$ as articlesWithVideoStat$,
   videosProduced$ as videosProducedStat$,
-  allMediaEvents$ as allMediaEventsStat$
+  allMediaEvents$ as allMediaEventsStat$,
+  totals$ as totalsStat$
 } from './stats';
 import {addMediaEvents} from './MediaEvent';
 
 const google = window.google;
 const componentHandler = window.componentHandler;
 
-const articles$ = new Rx.Subject();
-const articlesTotal$ = new Rx.Subject();
-const articlesWithVideos$ = new Rx.Subject();
-const articlesWithVideosTotal$ = new Rx.Subject();
-const videosProduced$ = new Rx.Subject();
-const videosProducedTotal$ = new Rx.Subject();
+const createCapiTotalChart = (stat$) => {
+  const data$ = new Rx.Subject();
+  const total$ = new Rx.Subject();
+
+  function update(dates) {
+    const days = dates.map(stat$);
+    const sub$ = Rx.Observable.combineLatest(...days).subscribe(data => {
+      const total = data.reduce((prev, next) => prev + next.total, 0);
+      data$.onNext(data);
+      total$.onNext(total);
+      sub$.dispose();
+    });
+  }
+
+  return {
+    data$,
+    total$,
+    update
+  }
+};
+
+
 const mediaEventTotals$ = new Rx.Subject();
 const mediaEvents$ = new Rx.Subject();
+
+const totals = createCapiTotalChart(totalsStat$);
+const articles = createCapiTotalChart(articlesStat$);
+const articlesWithVideos = createCapiTotalChart(articlesWithVideoStat$);
+const videosProduced = createCapiTotalChart(videosProducedStat$);
+
 const stats = {
   setDate: (startDate, endDate) => {
     const daysInRange = [];
@@ -34,32 +57,10 @@ const stats = {
       .map(i => formatDate(moment(startDate).add(i, 'days')))
       .filter(date => moment(date).isSameOrBefore(moment(endDate)));
 
-    const articlesDays = dates.map(articlesStat$);
-    const articlesSub$ = Rx.Observable.combineLatest(...articlesDays).subscribe(articles => {
-      const total = articles.reduce((prev, next) => prev + next.total, 0);
-
-      articles$.onNext(articles);
-      articlesTotal$.onNext(total);
-      articlesSub$.dispose();
-    });
-
-    const articlesWithVideoDays = dates.map(articlesWithVideoStat$);
-    const articlesWithVideoSub$ = Rx.Observable.combineLatest(...articlesWithVideoDays).subscribe(articles => {
-      const total = articles.reduce((prev, next) => prev + next.total, 0);
-
-      articlesWithVideos$.onNext(articles);
-      articlesWithVideosTotal$.onNext(total);
-      articlesWithVideoSub$.dispose();
-    });
-
-    const videosProducedDays = dates.map(videosProducedStat$);
-    const videosProducedSub$ = Rx.Observable.combineLatest(...videosProducedDays).subscribe(videosProduced => {
-      const total = videosProduced.reduce((prev, next) => prev + next.total, 0);
-
-      videosProduced$.onNext(videosProduced);
-      videosProducedTotal$.onNext(total);
-      videosProducedSub$.dispose();
-    });
+    totals.update(dates);
+    articles.update(dates);
+    articlesWithVideos.update(dates);
+    videosProduced.update(dates);
 
     const mediaEventsDays = dates.map(allMediaEventsStat$);
     const mediaEventsSub$ = Rx.Observable.combineLatest(...mediaEventsDays).subscribe(mediaEvents => {
@@ -104,17 +105,16 @@ app.on('setDateRange', ev => {
 
 
 // Write totals
-articlesTotal$.subscribe(total => app.set('articlesTotal', total));
-articlesWithVideosTotal$.subscribe(total => app.set('articlesWithVideoTotal', total));
-videosProducedTotal$.subscribe(total => app.set('videosProducedTotal', total));
+articles.total$.subscribe(total => app.set('articlesTotal', total));
+articlesWithVideos.total$.subscribe(total => app.set('articlesWithVideoTotal', total));
+videosProduced.total$.subscribe(total => app.set('videosProducedTotal', total));
 mediaEventTotals$.subscribe(mediaEventTotals => app.set('mediaEventTotals', mediaEventTotals));
 
-videosProduced$.subscribe(v => console.log(v))
 
 Rx.Observable.zip(
-  articlesWithVideos$,
-  articles$,
-  videosProduced$,
+  articlesWithVideos.data$,
+  articles.data$,
+  videosProduced.data$,
   (articlesWithVideos, articles, videosProduced) =>
   ({articlesWithVideos, articles, videosProduced}))
   .subscribe(({articlesWithVideos, articles, videosProduced}) => {
